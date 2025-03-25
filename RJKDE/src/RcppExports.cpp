@@ -23,16 +23,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // KDE_density_rcpp
-double KDE_density_rcpp(NumericVector mu, NumericVector h, NumericVector w, double x);
-RcppExport SEXP _RJKDE_KDE_density_rcpp(SEXP muSEXP, SEXP hSEXP, SEXP wSEXP, SEXP xSEXP) {
+double KDE_density_rcpp(NumericVector mu, NumericVector sigma, NumericVector w, double x);
+RcppExport SEXP _RJKDE_KDE_density_rcpp(SEXP muSEXP, SEXP sigmaSEXP, SEXP wSEXP, SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type w(wSEXP);
     Rcpp::traits::input_parameter< double >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(KDE_density_rcpp(mu, h, w, x));
+    rcpp_result_gen = Rcpp::wrap(KDE_density_rcpp(mu, sigma, w, x));
     return rcpp_result_gen;
 END_RCPP
 }
