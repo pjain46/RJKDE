@@ -1,19 +1,17 @@
 {
-    "id": "588B3DE3",
-    "path": "~/ASU Dropbox/Palak Jain/Palak_Hahn/Chapter2/RJKDE/R/RJMIXMOD.cpp",
-    "project_path": "R/RJMIXMOD.cpp",
+    "id": "AE598DC6",
+    "path": "~/ASU Dropbox/Palak Jain/Palak_Hahn/Chapter2/RJKDE/src/RJMIXMOD.cpp",
+    "project_path": "src/RJMIXMOD.cpp",
     "type": "cpp",
     "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1742786747723.0,
+    "created": 1742870417495.0,
     "source_on_save": false,
-    "relative_order": 2,
+    "relative_order": 4,
     "properties": {
         "source_window_id": "",
-        "Source": "Source",
-        "cursorPosition": "26,54",
-        "scrollLine": "22"
+        "Source": "Source"
     },
     "folds": "",
     "lastKnownWriteTime": 1712128913,
