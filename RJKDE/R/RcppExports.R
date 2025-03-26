@@ -29,7 +29,7 @@
 #' @export
 #'
 rnormmix_rcpp <- function(mu, sigma) {
-    .Call('_RJKDE_rnormmix_rcpp', PACKAGE = 'RJKDE', mu, sigma)
+    .Call(`_RJKDE_rnormmix_rcpp`, mu, sigma)
 }
 
 #' Compute Log-Density of a Gaussian Mixture Model
@@ -66,7 +66,7 @@ rnormmix_rcpp <- function(mu, sigma) {
 #' @seealso \code{\link{dnorm}} for single-component density
 #' @export
 KDE_density_rcpp <- function(mu, sigma, w, x) {
-    .Call('_RJKDE_KDE_density_rcpp', PACKAGE = 'RJKDE', mu, sigma, w, x)
+    .Call(`_RJKDE_KDE_density_rcpp`, mu, sigma, w, x)
 }
 
 #' Run Reversible Jump Markov Chain Monte Carlo for Gaussian Mixture Models
@@ -124,6 +124,6 @@ KDE_density_rcpp <- function(mu, sigma, w, x) {
 #' @seealso \code{\link{KDE_density_rcpp}} for the density calculation function
 #' @export
 rj_mcmc_rcpp <- function(y, ygrid, drop_add_prob = as.numeric( c(0.45,0.1,0.45)), sig_a = 5, sig_b = 5, mu_prior_b = 3, mu_step_size = 0.1, k = 20L, bw = 0.2, mc = 5000L, mu_h = 0.0, sig_h = 1.0) {
-    .Call('_RJKDE_rj_mcmc_rcpp', PACKAGE = 'RJKDE', y, ygrid, drop_add_prob, sig_a, sig_b, mu_prior_b, mu_step_size, k, bw, mc, mu_h, sig_h)
+    .Call(`_RJKDE_rj_mcmc_rcpp`, y, ygrid, drop_add_prob, sig_a, sig_b, mu_prior_b, mu_step_size, k, bw, mc, mu_h, sig_h)
 }
 
