@@ -1,19 +1,19 @@
+library(Rcpp)
 
-# Gibbs Sampler for Dirichlet Process Mixture Model (DPMM)
-# Assumes Gaussian likelihood with unknown mean/variance
 
-library(ggplot2)
+# generate data
 
-set.seed(123)
+n <- 5000
 
-# Generate Synthetic Data
-true_means <- c(-3, 0, 3)  # True cluster means
-true_sds <- c(1, 0.5, 1)    # True cluster standard deviations
-n_points <- c(50, 100, 50)  # Points per cluster
+kprime = 4
+mu = 2*rbeta(kprime, 0.8,0.8)-0.5
+sig = seq(0.125,0.75, length.out = kprime)
 
-data <- unlist(mapply(rnorm, n_points, true_means, true_sds))
-data <- data[sample(length(data))]  # Shuffling of Data points
+ind <- sample(1:kprime,n,replace=TRUE)
+x = mu[ind] + sig[ind]*rnorm(n)
+data <- sample(x,n,replace=TRUE)
 
+hist(data,freq=FALSE,ylim=c(0,1), 35,main='',ylab='data')
 
 ### 2. Initialize Gibbs Sampler ###
 n_iter <- 500
@@ -122,3 +122,9 @@ plot(1:n_iter, n_clusters, type = "l",
      xlab = "Iteration", ylab = "Number of clusters",
      main = "DPMM Gibbs Sampler: Cluster Count")
 
+# Posterior cluster assignments (last iteration)
+df <- data.frame(x = data, cluster = factor(z))
+ggplot(df, aes(x, fill = cluster)) +
+  geom_histogram(binwidth = 0.5, alpha = 0.7) +
+  ggtitle("DPMM Clustering Results") +
+  theme_minimal()
