@@ -45,7 +45,7 @@ for (iter in 1:n_iter){
 
   for (i in 1:n){
 
-    # If more than one point is in the cluster
+    # If more than one data point is in the cluster
     # Temporarily unassign point i but keep the cluster alive
 
     if(sum(z == z[i]) > 1){
@@ -128,3 +128,9 @@ ggplot(df, aes(x, fill = cluster)) +
   geom_histogram(binwidth = 0.5, alpha = 0.7) +
   ggtitle("DPMM Clustering Results") +
   theme_minimal()
+
+
+
+
+
+
