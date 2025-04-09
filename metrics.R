@@ -2,13 +2,12 @@
 
 # Metrics
 
-metrics <- function(f_true, f_calculated, f_calculated.l, f_calculated.u, n_iter = 500) {
+metrics <- function(f_true, f_est, f_lower, f_upper) {
   # Args:
   #   f_true: True density curve on ygrid
-  #   f_calculated: Estimated density on ygrid by dpmm or rjkde
-  #   f_calculated.l: Lower limit of credible interval
-  #   f_calculated.u: Upper limit of credible interval
-  #   n_iter: Number of Gibbs sampling iterations
+  #   f_est: Estimated density on ygrid by dpmm or rjkde
+  #   f_lower: Lower limit of credible interval
+  #   f_upper: Upper limit of credible interval
   #
   # Returns:
   #   A list containing:
@@ -20,39 +19,24 @@ metrics <- function(f_true, f_calculated, f_calculated.l, f_calculated.u, n_iter
 
   fmax <- max(f_true)
 
-  # Error
-  err <- rep(0, n_iter)
+  # Normalized RMSE
+  rmse <- sqrt(mean((f_true - f_est)^2)) / fmax
 
-  # Coverage
-  coverage <- rep(0, n_iter)
+  # Pointwise coverage
+  coverage <- mean(f_upper >= f_true & f_lower <= f_true)
 
-  # Complete Coverage
-  comp_coverage <- rep(0, n_iter)
+  # Complete coverage (entire curve within CI)
+  complete_coverage <- as.numeric(all(f_upper >= f_true & f_lower <= f_true))
 
-  # Credible Interval Length
-  credible_interval_len <- rep(0, n_iter)
-
-  for (i in 1:n_iter){
-    # Error
-    err[iter] <- sqrt(mean((f_true - f_calculated)^2))/fmax
-
-    # Coverage
-    coverage[iter] <- mean(f_calculated.u > f_true & f_calculated.l <= f_true)
-
-    # Complete Coverage
-    comp_coverage[iter] <- mean(all(f_calculated.u > f_true & f_calculated.l <= f_true))
-
-    # Credible Interval Length
-    comp_coverage[iter] <- mean(f_calculated.u - f_calculated.l)
-
-  }
+  # Average interval width
+  interval_width <- mean(f_upper - f_lower)
 
   # Return results
   list(
-    Mean_RMSE = mean(err),
-    Mean_Coverage = mean(coverage),
-    Mean_Complete_Coverage = mean(comp_coverage),
-    Mean_Interval_Length = mean(comp_coverage)
+    Mean_RMSE = rmse,
+    Mean_Coverage = coverage,
+    Mean_Complete_Coverage = complete_coverage,
+    Mean_Interval_Length = interval_width
   )
 
 }

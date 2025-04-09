@@ -1,12 +1,54 @@
 
+# Density estimation for DPMM
+density_dpmm <- function(z, k, means, precisions, ygrid, n) {
+  density_iter <- rep(0, length(ygrid))
+  if (k > 0) {
+    for (j in 1:k) {
+      weight <- sum(z == j) / n
+      density_iter <- density_iter + weight * dnorm(ygrid, means[j], 1/sqrt(precisions[j]))
+    }
+  }
+  return(density_iter)
+}
+
+
+# Parameter update for DPMM -- Normal - Normal Gamma Conjugate Distribution
+update_cluster_parameters <- function(z, k, data, lambda, mu0, lambda0, a0, b0) {
+  cluster_means <- rep(0,k)
+  cluster_precisions <- rep(0,k)
+
+  for (j in 1:k) {
+    nj <- sum(z == j)
+    x_bar <- mean(data[z == j])
+
+    # Posterior parameters
+    # Posterior precision = Prior precision + Data precision
+    prec_j <- lambda0 + nj * lambda
+    mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
+
+    a_j <- a0 + nj / 2
+    # b_new = b_0 + 0.5 * SSE within cluster + 0.5 * Penalty from deviating from mu_0
+    b_j <- b0 + 0.5 * sum((data[z == j] - x_bar)^2) +
+      (lambda0 * nj * (x_bar - mu0)^2) / (2 * (lambda0 + nj))
+
+    # Sample new parameters
+    cluster_precisions[j] <- rgamma(1, a_j, b_j)
+    cluster_means[j] <- rnorm(1, mu_j, sqrt(1 / (prec_j * cluster_precisions[j])))
+  }
+
+  return(list(cluster_means = cluster_means, cluster_precisions = cluster_precisions))
+}
+
+
+
 # Dirichlet Process Mixture Model (DPMM) clustering using Gibbs sampling
 
 
 dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
                             n_iter = 500,
                             alpha = 1, lambda = 1,
-                            mu0 = 0, lambda0 = 0.1,
-                            a0 = 2, b0 = 1) {
+                            mu0 = mean(data), lambda0 = 1/(2*sd(data))^2,
+                            a0 = 2, b0 = var(data)/2) {
 
   # Args:
   #   data: Numeric vector of data to cluster
@@ -15,7 +57,7 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
   #   alpha: DP concentration parameter
   #   lambda: Known precision for Normal-Normal conjugacy model
   #   mu0: Prior mean for cluster means for Normal-Normal conjugacy model
-  #   lambda0: Precision of prior for means
+  #   lambda0: Precision of prior for means (Expect means(mu0) within ±2 SD of global mean)
   #   a0: Shape for precision prior for Normal - (Normal - Gamma) conjugacy model for mean and precision to be assumed exchangeable
   #   b0: Scale for precision prior
   #
@@ -82,53 +124,14 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
     }
 
     # Step 2: Update cluster parameters
-    cluster_means <- numeric(k)
-    cluster_precisions <- numeric(k)
-
-    for (j in 1:k) {
-      nj <- sum(z == j)
-      x_bar <- mean(data[z == j])
-
-      # Posterior parameters
-      # Posterior precision = Prior precision + Data precision
-      prec_j <- lambda0 + nj * lambda
-      mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
-
-      a_j <- a0 + nj / 2
-      # b_new = b_0 + 0.5 * SSE within cluster + 0.5 * Penalty from deviating from mu_0
-      b_j <- b0 + 0.5 * sum((data[z == j] - x_bar)^2) +
-        (lambda0 * nj * (x_bar - mu0)^2) / (2 * (lambda0 + nj))
-
-      # Sample new parameters
-      cluster_precisions[j] <- rgamma(1, a_j, b_j)
-      cluster_means[j] <- rnorm(1, mu_j, sqrt(1 / (prec_j * cluster_precisions[j])))
-    }
+    parameters <- update_cluster_parameters(z, k, data, lambda, mu0, lambda0, a0, b0)
 
     # Store results
     cluster_history[iter, ] <- z
     n_clusters[iter] <- k
 
-    # Calculate density on ygrid for this iteration
-    density_iter <- rep(0, ngrid)
-
-    if (k > 0) {
-      # For each component in the mixture
-      for (j in 1:k) {
-        # Get component weight (proportion of points in this cluster)
-        weight <- sum(z == j) / n
-
-        # Calculate component density on grid
-        component_density <- weight * dnorm(ygrid,
-                                            mean = cluster_means[j],
-                                            sd = 1/sqrt(cluster_precisions[j]))
-
-        # Add to total density
-        density_iter <- density_iter + component_density
-      }
-    }
-
-    # Store density for this iteration
-    density_history[, iter] <- density_iter
+    # Calculate density on ygrid for this iteration and store it.
+    density_history[, iter] <- density_dpmm(z, k, parameters$cluster_means, parameters$cluster_precisions, ygrid, n)
 
     }
 
@@ -145,66 +148,28 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
   )
 }
 
-# Example usage:
-# Generate data
+# Example
+
 set.seed(123)
-n <- 5000
-kprime <- 4
-mu <- 2 * rbeta(kprime, 0.8, 0.8) - 0.5
-sig <- seq(0.125, 0.75, length.out = kprime)
-ind <- sample(1:kprime, n, replace = TRUE)
-x <- mu[ind] + sig[ind] * rnorm(n)
-data <- sample(x, n, replace = TRUE)
+
+# Generate data
+true_means <- c(-3, 0, 3)  # True cluster means
+true_sds <- c(1, 0.5, 1)    # True cluster standard deviations
+n_points <- c(50, 100, 50)  # Points per cluster
+n <- sum(n_points)
+data <- unlist(mapply(rnorm, n_points, true_means, true_sds))
+data <- data[sample(length(data))]  # Shuffling of Data points
 ygrid <- seq(min(data) - 1, max(data) + 1, length.out = 100)
 
-# Calculate true weights (proportion in each component)
-true_weights <- table(ind)/n
-true_weights <- as.numeric(true_weights)  # Convert to numeric vector
-
-
-# Calculate true density at each grid point
-true_density <- numeric(length(ygrid))
-
-for (i in 1:length(ygrid)) {
-  # Sum weighted densities from all components
-  true_density[i] <- sum(true_weights * dnorm(ygrid[i], mean = mu, sd = sig))
-}
-
-
-# Start timer
-start_time <- Sys.time()
 
 # Run DPMM clustering
-n_iter = 500
+n_iter <- 100
 results <- dpmm_clustering(data, ygrid, n_iter = n_iter)
-
-
 fhat <- rowMeans(results$density_history)
-fhat.u <- apply(results$density_history,1,quantile,0.95)
-#fhat.l <- rep(0,length(fhat.u))
-fhat.l <- apply(results$density_history,1,quantile,0.05)
-
-# End timer
-end_time <- Sys.time()
-elapsed_time <- as.numeric(difftime(end_time, start_time, units = "secs"))
 
 # Plot results
 hist(data, freq = FALSE, ylim = c(0, 1), breaks = 35, main = '', ylab = 'data')
 lines(ygrid,fhat,col='green',lwd=2,lty=2)
-lines(ygrid,fhat.u,lty=3,col='red')
-lines(ygrid,fhat.l,lty=3,col='red')
 
 
-metrics <- metrics(true_density, fhat, fhat.l, fhat.u, n_iter = n_iter)
-results_df <- data.frame(
-  Mean_Time = 0,
-  Mean_RMSE = metrics$Mean_RMSE,
-  Mean_Coverage = metrics$Mean_Coverage,
-  Mean_Complete_Coverage = metrics$Mean_Complete_Coverage,
-  Mean_Interval_Length = metrics$Mean_Interval_Length
 
-)
-#row.names(results_df)<- c("Targeted Sub-sampling", "RJKDE Uniform Sub-sampling", "Full Data", "Bayesm with Uniform Sub-sampling")
-
-# Print the data frame
-print(round(results_df,2))
