@@ -36,7 +36,7 @@ metrics <- function(f_true, f_est, f_lower, f_upper) {
     Mean_RMSE = rmse,
     Mean_Coverage = coverage,
     Mean_Complete_Coverage = complete_coverage,
-    Mean_Interval_Length = interval_width
+    Mean_Interval_Width = interval_width
   )
 
 }
