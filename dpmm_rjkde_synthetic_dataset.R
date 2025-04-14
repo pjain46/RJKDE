@@ -59,7 +59,7 @@ for (iter in 1:mc){
   # ind <- sample(1:kprime, n, replace = TRUE)
   # x <- mu[ind] + sig[ind] * rnorm(n)
   # data <- sample(x, n)
-  # ygrid <- seq(min(data) - 1, max(data) + 1, length.out = gridsize)
+  # ygrid <- seq(min(data) - 1, min(data) - 1, length.out = gridsize)
 
 
 
@@ -73,8 +73,8 @@ for (iter in 1:mc){
   # ygrid <- seq(min(data) - 1, max(data) + 1, length.out = gridsize)
 
   # Two well-separated gaussians
-  data <- c(rnorm(500, mean=-2, sd=0.5), rnorm(500, mean=2, sd=0.5))
-  ygrid <- seq(min(data) - 1, max(data) + 1, length.out = gridsize)
+  # data <- c(rnorm(500, mean=-2, sd=0.5), rnorm(500, mean=2, sd=0.5))
+  # ygrid <- seq(min(data) - 1, max(data) + 1, length.out = gridsize)
 
   #  t-distribution + Gaussian mixture
   data <- c(rt(300, df=3)*2 + 1, rnorm(700, mean=4, sd=0.5))
@@ -82,19 +82,8 @@ for (iter in 1:mc){
   n <- length(data)
 
 
-  # # Calculate true weights (proportion in each component)
-  # true_weights <- table(ind)/n
-  # true_weights <- as.numeric(true_weights)  # Convert to numeric vector
-  #
-  # # Calculate true density at each grid point
-  # true_density <- numeric(length(ygrid))
-  #
-  # for (i in 1:length(ygrid)) {
-  #   # Sum weighted densities from all components
-  #   true_density[i] <- sum(true_weights * dnorm(ygrid[i], mean = mu, sd = sig))
-  # }
-
-
+  # Calculate true density at each grid point
+  true_density <- density(data, n = length(ygrid), from = min(data) - 1, to = max(data) + 1)$y
 
   # Run DPMM clustering
   # Start timer
@@ -168,7 +157,7 @@ for (iter in 1:mc){
 
 # Plot results
 hist(data, freq = FALSE, ylim = c(0, 1), breaks = 35, main = '', ylab = 'density', xlab = 'data')
-lines(density(data),col='black',lwd=2)
+lines(true_density,col='black',lwd=2)
 lines(ygrid,fhat_rjkde,col='green',lwd=2)
 lines(ygrid,fhat_rjkde.u,lty=3,lwd=2, col='red')
 lines(ygrid,fhat_rjkde.l,lty=3,lwd=2, col='red')

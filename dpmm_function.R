@@ -131,7 +131,7 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
     n_clusters[iter] <- k
 
     # Calculate density on ygrid for this iteration and store it.
-    density_history[, iter] <- density_dpmm(z, k, parameters$cluster_means, parameters$cluster_precisions, ygrid, n)
+    density_history[, iter] <- density_dpmm(z, k, means = parameters$cluster_means, precisions = parameters$cluster_precisions, ygrid = ygrid, n = n)
 
     }
 
@@ -139,10 +139,7 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
   list(
     cluster_history = cluster_history,
     n_clusters = n_clusters,
-    parameters = list(
-      means = cluster_means,
-      precisions = cluster_precisions
-    ),
+    parameters = parameters,
     density_history = density_history,
     ygrid = ygrid
   )
@@ -164,7 +161,7 @@ ygrid <- seq(min(data) - 1, max(data) + 1, length.out = 100)
 
 # Run DPMM clustering
 n_iter <- 100
-results <- dpmm_clustering(data, ygrid, n_iter = n_iter)
+results <- dpmm_clustering(data, ygrid = ygrid, n_iter = n_iter)
 fhat <- rowMeans(results$density_history)
 
 # Plot results
