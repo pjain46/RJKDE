@@ -10,9 +10,14 @@ datasets <- c("two_gaussians", "three_overlapping_gaussians", "skewed_mix",
               "single_normal", "near_identical_mix", "outliers")
 
 # Run analysis
-dataset <- datasets[1]
+dataset <- "skewed_mix"
 message("\nAnalyzing dataset: ", dataset)
-results <- compare_methods(dataset, n_iter=100, mc=5)
+# Generate Data
+data <- generate_datasets(dataset)
+gridsize <- 100
+ygrid <- seq(min(data)-1, max(data)+1, length.out=gridsize)
+# ygrid <- seq(quantile(data, 0.01), quantile(data, 0.99), length.out=100)
+results <- compare_methods(data, ygrid, n_iter=100, mc=5)
 
 # Generate and save results table
 results_table <- generate_results_table(results)
