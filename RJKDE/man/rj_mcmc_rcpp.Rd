@@ -10,7 +10,6 @@ rj_mcmc_rcpp(
   drop_add_prob = as.numeric(c(0.45, 0.1, 0.45)),
   sig_a = 5,
   sig_b = 5,
-  mu_prior_b = 3,
   mu_step_size = 0.1,
   k = 20L,
   bw = 0.2,
@@ -30,8 +29,6 @@ rj_mcmc_rcpp(
 \item{sig_a:}{Shape parameter for Beta prior on bandwidths (default: 5).}
 
 \item{sig_b:}{Scale parameter for Beta prior on bandwidths (default: 5).}
-
-\item{mu_prior_b:}{Prior parameter for means (default: 3).}
 
 \item{mu_step_size:}{Step size for mean proposals (default: 0.1).}
 

@@ -37,8 +37,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rj_mcmc_rcpp
-List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_prob, double sig_a, double sig_b, double mu_prior_b, double mu_step_size, int k, double bw, int mc, double mu_h, double sig_h);
-RcppExport SEXP _RJKDE_rj_mcmc_rcpp(SEXP ySEXP, SEXP ygridSEXP, SEXP drop_add_probSEXP, SEXP sig_aSEXP, SEXP sig_bSEXP, SEXP mu_prior_bSEXP, SEXP mu_step_sizeSEXP, SEXP kSEXP, SEXP bwSEXP, SEXP mcSEXP, SEXP mu_hSEXP, SEXP sig_hSEXP) {
+List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_prob, double sig_a, double sig_b, double mu_step_size, int k, double bw, int mc, double mu_h, double sig_h);
+RcppExport SEXP _RJKDE_rj_mcmc_rcpp(SEXP ySEXP, SEXP ygridSEXP, SEXP drop_add_probSEXP, SEXP sig_aSEXP, SEXP sig_bSEXP, SEXP mu_step_sizeSEXP, SEXP kSEXP, SEXP bwSEXP, SEXP mcSEXP, SEXP mu_hSEXP, SEXP sig_hSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,14 +47,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type drop_add_prob(drop_add_probSEXP);
     Rcpp::traits::input_parameter< double >::type sig_a(sig_aSEXP);
     Rcpp::traits::input_parameter< double >::type sig_b(sig_bSEXP);
-    Rcpp::traits::input_parameter< double >::type mu_prior_b(mu_prior_bSEXP);
     Rcpp::traits::input_parameter< double >::type mu_step_size(mu_step_sizeSEXP);
     Rcpp::traits::input_parameter< int >::type k(kSEXP);
     Rcpp::traits::input_parameter< double >::type bw(bwSEXP);
     Rcpp::traits::input_parameter< int >::type mc(mcSEXP);
     Rcpp::traits::input_parameter< double >::type mu_h(mu_hSEXP);
     Rcpp::traits::input_parameter< double >::type sig_h(sig_hSEXP);
-    rcpp_result_gen = Rcpp::wrap(rj_mcmc_rcpp(y, ygrid, drop_add_prob, sig_a, sig_b, mu_prior_b, mu_step_size, k, bw, mc, mu_h, sig_h));
+    rcpp_result_gen = Rcpp::wrap(rj_mcmc_rcpp(y, ygrid, drop_add_prob, sig_a, sig_b, mu_step_size, k, bw, mc, mu_h, sig_h));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -62,7 +61,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_RJKDE_rnormmix_rcpp", (DL_FUNC) &_RJKDE_rnormmix_rcpp, 2},
     {"_RJKDE_KDE_density_rcpp", (DL_FUNC) &_RJKDE_KDE_density_rcpp, 4},
-    {"_RJKDE_rj_mcmc_rcpp", (DL_FUNC) &_RJKDE_rj_mcmc_rcpp, 12},
+    {"_RJKDE_rj_mcmc_rcpp", (DL_FUNC) &_RJKDE_rj_mcmc_rcpp, 11},
     {NULL, NULL, 0}
 };
 

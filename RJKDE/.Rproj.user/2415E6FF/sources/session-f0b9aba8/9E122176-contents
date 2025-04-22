@@ -103,7 +103,6 @@ double KDE_density_rcpp(NumericVector mu, NumericVector sigma, NumericVector w, 
 //'        (default: c(0.45, 0.1, 0.45)).
 //' @param sig_a: Shape parameter for Beta prior on bandwidths (default: 5).
 //' @param sig_b: Scale parameter for Beta prior on bandwidths (default: 5).
-//' @param mu_prior_b: Prior parameter for means (default: 3).
 //' @param mu_step_size: Step size for mean proposals (default: 0.1).
 //' @param k: Initial number of mixture components (default: 20).
 //' @param bw: Bandwidth parameter (default: 0.2).
@@ -147,7 +146,7 @@ double KDE_density_rcpp(NumericVector mu, NumericVector sigma, NumericVector w, 
 //' @seealso \code{\link{KDE_density_rcpp}} for the density calculation function
 //' @export
 // [[Rcpp::export]]
-List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_prob = NumericVector::create(0.45,0.1,0.45), double sig_a = 5, double sig_b = 5, double mu_prior_b = 3,double mu_step_size = 0.1, int k = 20, double bw = 0.2, int mc = 5000, double mu_h = 0.0, double sig_h = 1.0){
+List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_prob = NumericVector::create(0.45,0.1,0.45), double sig_a = 5, double sig_b = 5, double mu_step_size = 0.1, int k = 20, double bw = 0.2, int mc = 5000, double mu_h = 0.0, double sig_h = 1.0){
 
   double nsamp = y.length();
   double gridsize = ygrid.length();
@@ -200,7 +199,7 @@ List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_p
   double adj;
   double sig_new;
   NumericVector like_prop(nsamp);
-  NumericVector mu_new;
+  NumericVector mu_new(1);
 
 
 
@@ -209,6 +208,9 @@ List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_p
     NumericVector drop_add = sample(NumericVector::create(-1, 0, 1), 1, false, drop_add_prob);
     double k_prop = abs(k + drop_add[0]);
     IntegerVector ind_prop = sample(k, 1, false);
+
+
+
 
     adj = 0;
 

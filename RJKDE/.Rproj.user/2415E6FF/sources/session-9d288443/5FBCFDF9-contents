@@ -1,4 +1,0 @@
-useDynLib(RJKDE, .registration = TRUE)
-export(rnormmix_rcpp)
-export(KDE_density_rcpp)
-export(rj_mcmc_rcpp)

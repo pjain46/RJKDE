@@ -1,0 +1,172 @@
+
+# Density estimation for DPMM
+density_dpmm <- function(z, k, means, precisions, ygrid, n) {
+  density_iter <- rep(0, length(ygrid))
+  if (k > 0) {
+    for (j in 1:k) {
+      weight <- sum(z == j) / n
+      density_iter <- density_iter + weight * dnorm(ygrid, means[j], 1/sqrt(precisions[j]))
+    }
+  }
+  return(density_iter)
+}
+
+
+# Parameter update for DPMM -- Normal - Normal Gamma Conjugate Distribution
+update_cluster_parameters <- function(z, k, data, lambda, mu0, lambda0, a0, b0) {
+  cluster_means <- rep(0,k)
+  cluster_precisions <- rep(0,k)
+
+  for (j in 1:k) {
+    nj <- sum(z == j)
+    x_bar <- mean(data[z == j])
+
+    # Posterior parameters
+    # Posterior precision = Prior precision + Data precision
+    prec_j <- lambda0 + nj * lambda
+    mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
+
+    a_j <- a0 + nj / 2
+    # b_new = b_0 + 0.5 * SSE within cluster + 0.5 * Penalty from deviating from mu_0
+    b_j <- b0 + 0.5 * sum((data[z == j] - x_bar)^2) +
+      (lambda0 * nj * (x_bar - mu0)^2) / (2 * (lambda0 + nj))
+
+    # Sample new parameters
+    cluster_precisions[j] <- rgamma(1, a_j, b_j)
+    cluster_means[j] <- rnorm(1, mu_j, sqrt(1 / (prec_j * cluster_precisions[j])))
+  }
+
+  return(list(cluster_means = cluster_means, cluster_precisions = cluster_precisions))
+}
+
+
+
+# Dirichlet Process Mixture Model (DPMM) clustering using Gibbs sampling
+
+
+dpmm_clustering <- function(data, ygrid = seq(min(data) - 1, max(data) + 1, length.out = 100),
+                            n_iter = 500,
+                            alpha = 1, lambda = 1,
+                            mu0 = mean(data), lambda0 = 1/(2*sd(data))^2,
+                            a0 = 2, b0 = var(data)/2) {
+
+  # Args:
+  #   data: Numeric vector of data to cluster
+  #   ygrid: Grid points where density should be evaluated
+  #   n_iter: Number of Gibbs sampling iterations
+  #   alpha: DP concentration parameter
+  #   lambda: Known precision for Normal-Normal conjugacy model
+  #   mu0: Prior mean for cluster means for Normal-Normal conjugacy model
+  #   lambda0: Precision of prior for means (Expect means(mu0) within ±2 SD of global mean)
+  #   a0: Shape for precision prior for Normal - (Normal - Gamma) conjugacy model for mean and precision to be assumed exchangeable
+  #   b0: Scale for precision prior
+  #
+  # Returns:
+  #   A list containing:
+  #     - cluster_history: Matrix of cluster assignments for each iteration
+  #     - n_clusters: Vector of number of clusters at each iteration
+  #     - parameters: List of final cluster means and precisions
+
+
+  n <- length(data)
+  ngrid <- length(ygrid)
+
+  # Initialize cluster assignments - all data points in one cluster
+  z <- rep(1, n)
+  k <- 1  # Number of clusters
+
+  # Store results
+  cluster_history <- matrix(0, n_iter, n)
+  n_clusters <- numeric(n_iter)
+  density_history <- matrix(0, ngrid, n_iter)
+
+  for (iter in 1:n_iter) {
+    # Step 1: Update cluster assignments -- Chinese restaurant process
+    for (i in 1:n) {
+
+      # If more than one data point is in the cluster
+      # Temporarily unassign point i
+      if (sum(z == z[i]) > 1) {
+        z[i] <- NA
+      } else {
+        # If point i is the ONLY member of its cluster
+        # Decrease total cluster count since we're deleting this cluster
+        # Renumber higher clusters to fill the gap
+        # Unassign point i
+        k <- k - 1
+        z[z > z[i]] <- z[z > z[i]] - 1
+        z[i] <- NA
+      }
+
+      # Compute probabilities for existing clusters -- using Normal - Normal conjugacy model
+      cluster_probs <- sapply(1:k, function(j) {
+        nj <- sum(z == j, na.rm = TRUE)
+        x_bar <- mean(data[z == j], na.rm = TRUE)
+        prec_j <- lambda0 + nj * lambda
+        mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
+
+        # Compute probability for cluster j: Likelihood × Cluster size
+        # Posterior Predictive Distribution from conjugate model
+        dnorm(data[i], mu_j, sqrt(1 / prec_j + 1 / lambda)) * nj
+      })
+
+      # Probability for new cluster
+      new_cluster_prob <- alpha * dnorm(data[i], mu0, sqrt(1 / lambda0 + 1 / lambda))
+
+      # Sample new assignment for the data point
+      probs <- c(cluster_probs, new_cluster_prob)
+      z[i] <- sample(1:(k + 1), 1, prob = probs)
+
+      # If we sampled the new cluster
+      if (z[i] == k + 1) {
+        k <- k + 1
+      }
+    }
+
+    # Step 2: Update cluster parameters
+    parameters <- update_cluster_parameters(z, k, data, lambda, mu0, lambda0, a0, b0)
+
+    # Store results
+    cluster_history[iter, ] <- z
+    n_clusters[iter] <- k
+
+    # Calculate density on ygrid for this iteration and store it.
+    density_history[, iter] <- density_dpmm(z, k, means = parameters$cluster_means, precisions = parameters$cluster_precisions, ygrid = ygrid, n = n)
+
+    }
+
+  # Return results
+  list(
+    cluster_history = cluster_history,
+    n_clusters = n_clusters,
+    parameters = parameters,
+    density_history = density_history,
+    ygrid = ygrid
+  )
+}
+
+# Example
+
+set.seed(123)
+
+# Generate data
+true_means <- c(-3, 0, 3)  # True cluster means
+true_sds <- c(1, 0.5, 1)    # True cluster standard deviations
+n_points <- c(50, 100, 50)  # Points per cluster
+n <- sum(n_points)
+data <- unlist(mapply(rnorm, n_points, true_means, true_sds))
+data <- data[sample(length(data))]  # Shuffling of Data points
+ygrid <- seq(min(data) - 1, max(data) + 1, length.out = 100)
+
+
+# Run DPMM clustering
+n_iter <- 100
+results <- dpmm_clustering(data, ygrid = ygrid, n_iter = n_iter)
+fhat <- rowMeans(results$density_history)
+
+# Plot results
+hist(data, freq = FALSE, ylim = c(0, 1), breaks = 35, main = '', ylab = 'data')
+lines(ygrid,fhat,col='green',lwd=2,lty=2)
+
+
+

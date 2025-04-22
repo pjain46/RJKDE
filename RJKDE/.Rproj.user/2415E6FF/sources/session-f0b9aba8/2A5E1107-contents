@@ -1,0 +1,361 @@
+
+library(bayesm)
+rnormmix <- function(n, mu, sigma,w){
+  k <- length(mu)
+  inds <- sample(k, n, prob = w, replace=TRUE)
+  
+  xsamp <- rnorm(n,mu[inds], sigma[inds])
+  return(list(inds = inds, xsamp = xsamp))
+}
+
+normmix_density <- function(x, mus, sigs, q){
+  
+  A <- sum(q*dnorm(x, mus, sigs))
+  return(A)
+}
+
+
+mc_simulation <- 20
+
+gridsize <- 50
+
+# Estimated Density
+fhat_w <- matrix(0, gridsize, mc_simulation)
+fhat_u <- matrix(0, gridsize, mc_simulation)
+fhat_n <- matrix(0, gridsize, mc_simulation)
+fhat_bayesm <- matrix(0, gridsize, mc_simulation)
+
+fhat_w.u <- matrix(0, gridsize, mc_simulation)
+fhat_u.u <- matrix(0, gridsize, mc_simulation)
+fhat_n.u <- matrix(0, gridsize, mc_simulation)
+fhat_bayesm.u <- matrix(0, gridsize, mc_simulation)
+
+fhat_w.l <- matrix(0, gridsize, mc_simulation)
+fhat_u.l <- matrix(0, gridsize, mc_simulation)
+fhat_n.l <- matrix(0, gridsize, mc_simulation)
+fhat_bayesm.l <- matrix(0, gridsize, mc_simulation)
+
+# Time 
+t_w <- rep(0, mc_simulation) # Weighted Sampling
+t_u <- rep(0, mc_simulation) # Uniform(Naive) Sampling
+t_n <- rep(0, mc_simulation) # No sampling
+t_bayesm <- rep(0, mc_simulation) # Bayesm Package
+
+# Error
+err_w <- rep(0, mc_simulation)
+err_u <- rep(0, mc_simulation) 
+err_n <- rep(0, mc_simulation) 
+err_bayesm <- rep(0, mc_simulation) 
+
+# Coverage 
+cover_w <- rep(0, mc_simulation)
+cover_u <- rep(0, mc_simulation) 
+cover_n <- rep(0, mc_simulation) 
+cover_bayesm <- rep(0, mc_simulation) 
+
+# Complete Coverage 
+cc_w <- rep(0, mc_simulation)
+cc_u <- rep(0, mc_simulation) 
+cc_n <- rep(0, mc_simulation) 
+cc_bayesm <- rep(0, mc_simulation) 
+
+# Credible Interval Length
+cil_w <- rep(0, mc_simulation)
+cil_u <- rep(0, mc_simulation) 
+cil_n <- rep(0, mc_simulation) 
+cil_bayesm <- rep(0, mc_simulation) 
+
+for (iter in 1:mc_simulation ) {
+  
+  flag <- iter%%1==0
+  if(flag) print(iter)
+  # generate data
+  
+  # DGP with heavy tail but no mode in the region
+  
+  
+  n <- 20000
+  
+  kprime <- 4
+  
+   m <- c(-1.5, sort(5*rbeta(kprime-1, 3,1)))
+   s <- 1.5*rbeta(kprime,2,2) + 1
+   p <- sort(rdirichlet(50*c(rep(1,kprime-1),10)))
+  
+  
+ # m <- c(-1, 0,1,5)
+#  s <- c(1, 1, 1,1)*0.3
+  
+  
+ # p <- c(0.02, 0.02,0.05, 0.91)
+  
+  print(cbind(p,m,s))
+ 
+  
+  ind <- sample(1:kprime,n,replace=TRUE,prob = p)
+  
+  x = m[ind] + s[ind]*rnorm(n)
+  
+  mu_h <- 0
+  sig_h <- 1.25*sd(x)
+  
+  w <- dnorm(x,mu_h,sig_h,log=TRUE)
+  w <- w - max(w)
+  r <- exp(w)/sum(exp(w))
+  
+  
+  n.sub <- 200
+  y <- sample(x,n.sub,replace=TRUE,prob = r) #Weighted Sampling
+  y2 <- sample(x,n.sub,replace=TRUE) #Uniform(Naive) Sampling
+  y3 <- x
+  
+  true_mu <- m
+  true_sig <- s
+  true_w <- p
+  
+  
+
+  
+  print(sig_h)
+  
+  sdy <- sdy2 <- sdy3 <- 1
+  
+  
+
+  burn <- 2000
+  
+  # ygrid <- seq(min(y)-1*sd(y),max(y)+1*sd(y),length.out = gridsize)
+  # ygrid2 <- seq(min(y2)-1*sd(y2),max(y2)+1*sd(y2),length.out = gridsize)
+  # ygrid3 <- seq(min(y3)-1*sd(y3),max(y3)+1*sd(y3),length.out = gridsize)
+  
+  ygrid <- seq(-3,0,length.out = gridsize)
+  ygrid2 <- seq(-3,0,length.out = gridsize)
+  ygrid3 <- seq(-3,0,length.out = gridsize)
+  
+  ftemp <- sapply(ygrid,function(x) normmix_density(x, true_mu/sdy, true_sig/sdy,true_w))
+  ftemp2 <- sapply(ygrid2,function(x) normmix_density(x, true_mu/sdy2, true_sig/sdy2,true_w))
+  ftemp3 <- sapply(ygrid3,function(x) normmix_density(x, true_mu/sdy3, true_sig/sdy3,true_w))
+  fmax <- max(ftemp)
+  
+  # par(mfrow = c(3,1))
+  
+  
+  # hist(y*sdy,freq=FALSE,ylim=c(0,1), 35,main='')
+  #  lines(ygrid*sdy,ftemp,col='purple',lwd=2)
+  #lines(ygrid*sdy,ftemp_alt,col='orange')
+  # lines(ygrid*sdy, dnorm(ygrid*sdy,mu_h,sig_h),col='blue',lwd=2)
+  
+  
+  
+  mc = 20000
+  kinit = 200
+  # kde = density(y)
+  # bw = 1.1*kde$bw
+  # 
+  # # print(bw)
+  # # print(sig_h/sdy)
+  # # 
+  # kde2 = density(y2)
+  # bw2 = 1.1*kde2$bw
+  # 
+  # kde3 = density(y3)
+  # bw3 = 1.1*kde3$bw
+  
+  bw <- bw2 <- 0.45
+    
+    bw3 <- 0.4
+  
+  start_time <- Sys.time()
+  
+  # kinit = ceiling(sqrt(12*(1-(0.1*sig_h/sdy)^2) + 1))
+  
+  
+  t <- proc.time()
+  
+  KDEpost <- rj_mcmc_rcpp(y, ygrid, k = kinit, sig_a = bw*15, sig_b = 15, bw = bw, mc = mc, mu_prior_b = 10, mu_h = mu_h, sig_h = sig_h)
+  
+  t_w[iter] <- (proc.time() - t)[1]
+  
+  t <- proc.time()
+  
+  KDEpost2 <- rj_mcmc_rcpp(y2, ygrid2, k = kinit, sig_a = bw2*15, sig_b = 15,bw = bw2, mc = mc, mu_prior_b = 10, mu_h = mu_h, sig_h = 3)
+  
+  t_u[iter] <- (proc.time() - t)[1]
+  
+  t <- proc.time()
+  
+  KDEpost3 <- rj_mcmc_rcpp(y3, ygrid3, k = kinit, sig_a = bw3*15, sig_b = 15,bw = bw3, mc = mc, mu_prior_b = 10, mu_h = mu_h, sig_h = 3)
+  
+  t_n[iter] <- (proc.time() - t)[1]
+  
+  t <- proc.time()
+  
+  Data3 = list(y = matrix(y2, ncol = 1))
+  # Prior1 = list(ncomp = kprime)
+  Prioralpha = list(Istarmin=1, Istarmax=15, power=0.8)
+  Prior1 = list(Prioralpha=Prioralpha)
+  Mcmc = list(R=7000, nprint = 0, Loglike = TRUE)
+  
+  #density_n <- rDPGibbs(Prior=Prior1, Data=Data3, Mcmc=Mcmc) # Density for No sampling case using bayesm
+  
+  t_bayesm[iter] <- (proc.time() - t)[1]
+  
+  
+  fsamps <- KDEpost$fsamps/sdy
+  fsamps <- fsamps[,(burn+1):mc]
+  
+  
+  fhat <- rowMeans(fsamps)
+  fhat.u <- apply(fsamps,1,quantile,0.95)
+  fhat.l <- rep(0,length(fhat.u))
+  
+  fsamps_adj <- KDEpost$fsamps_adj/sdy
+  fsamps_adj <- fsamps_adj[,(burn+1):mc]
+  
+  
+  fhat_adj <- rowMeans(fsamps_adj,na.rm = TRUE)
+  fhat_adj.u <- apply(fsamps_adj,1,quantile,0.95,na.rm = TRUE)
+  fhat_adj.l <- rep(0,length(fhat_adj.u))
+  
+  fhat_w[,iter] <- fhat_adj
+  fhat_w.u[,iter] <- fhat_adj.u
+  fhat_w.l[,iter] <- fhat_adj.l
+  
+  fsamps2 <- KDEpost2$fsamps/sdy2
+  fsamps2 <- fsamps2[,(burn+1):mc]
+  
+  
+  fhat2 <- rowMeans(fsamps2)
+  fhat2.u <- apply(fsamps2,1,quantile,0.95)
+  fhat2.l <- rep(0,length(fhat2.u))
+  
+  fhat_u[,iter] <- fhat2
+  fhat_u.u[,iter] <- fhat2.u
+  fhat_u.l[,iter] <- fhat2.l
+  
+  
+  fsamps3 <- KDEpost3$fsamps/sdy3
+  fsamps3 <- fsamps3[,(burn+1):mc]
+  
+  #fsamps4 <- sapply(seq(burn+1, 7000), function(j) mixDen(x = matrix(ygrid3,ncol=1), pvec = density_n$nmix$probdraw[[j]], comps = density_n$nmix$compdraw[[j]]))
+  
+  fsamps4 <- fsamps3
+  
+  fhat3 <- rowMeans(fsamps3)
+  fhat3.u <- apply(fsamps3,1,quantile,0.95)
+  fhat3.l <- rep(0,length(fhat3.u))
+  
+  fhat_n[,iter] <- fhat3
+  fhat_n.u[,iter] <- fhat3.u
+  fhat_n.l[,iter] <- fhat3.l
+
+  
+  fhat4 <- rowMeans(fsamps4)
+  fhat4.u <- apply(fsamps4,1,quantile,0.95)
+  fhat4.l <- rep(0,length(fhat4.u))
+  
+  fhat_bayesm[,iter] <- fhat4
+  fhat_bayesm.u[,iter] <- fhat4.u
+  fhat_bayesm.l[,iter] <- fhat4.l
+  
+  # Error
+  err_w[iter] <- sqrt(mean((ftemp - fhat_adj)^2))/fmax
+  err_u[iter] <- sqrt(mean((ftemp2 - fhat2)^2))/fmax
+  err_n[iter] <- sqrt(mean((ftemp3 - fhat3)^2))/fmax
+  err_bayesm[iter] <- sqrt(mean((ftemp3 - fhat4)^2))/fmax
+  
+  # Coverage
+  cover_w[iter] <- mean(fhat_adj.u > ftemp & fhat_adj.l <= ftemp)
+  cover_u[iter] <- mean(fhat2.u > ftemp2 & fhat2.l <= ftemp2)
+  cover_n[iter] <- mean(fhat3.u > ftemp3 & fhat3.l <= ftemp3)
+  cover_bayesm[iter] <- mean(fhat4.u > ftemp3 & fhat4.l <= ftemp3)
+  
+  
+  # Complete Coverage
+  cc_w[iter] <- mean(all(fhat_adj.u > ftemp & fhat_adj.l <= ftemp))
+  cc_u[iter] <- mean(all(fhat2.u > ftemp2 & fhat2.l <= ftemp2))
+  cc_n[iter] <- mean(all(fhat3.u > ftemp3 & fhat3.l <= ftemp3))
+  cc_bayesm[iter] <- mean(all(fhat4.u > ftemp3 & fhat4.l <= ftemp3))
+  
+  # Credible Interval Length
+  cil_w[iter] <- mean(fhat_adj.u - fhat_adj.l)
+  cil_u[iter] <- mean(fhat2.u - fhat2.l)
+  cil_n[iter] <- mean(fhat3.u - fhat3.l)
+  cil_bayesm[iter] <- mean(fhat4.u - fhat4.l)
+  
+  
+  
+  if(TRUE){
+    par(mfrow=c(2,3), mai = c(1, 0.5, 0.05, 0.1))
+    
+    
+    
+    hist(y*sdy,freq=FALSE, 35,main='',ylab='Density', xlab = 'y')
+    lines(ygrid,ftemp,col='purple',lwd=2)
+    #lines(ygrid*sdy,ftemp_alt,col='orange')
+    #lines(ygrid2*sdy2,ftemp2,col='red',lwd=1,lty=2)
+    lines(ygrid,fhat,col='green',lwd=2,lty=2)
+    lines(ygrid,fhat.u,lty=3,col='red')
+    lines(ygrid,fhat.l,lty=3,col='red')
+    lines(ygrid, dnorm(ygrid,mu_h,sig_h),col='blue',lwd=2)
+    
+    
+    
+    hist(y2*sdy2,freq=FALSE, 35,main='',ylab='Density', xlab = 'y')
+    
+    lines(ygrid2,ftemp2,col='purple',lwd=2)
+    lines(ygrid2,fhat2,col='green',lwd=2,lty=2)
+    lines(ygrid2,fhat2.u,lty=3,col='red')
+    lines(ygrid2,fhat2.l,lty=3,col='red')
+    
+    hist(y3*sdy3,freq=FALSE, 35,main='',ylab='Density', xlab = 'y')
+    lines(ygrid,ftemp3,col='purple',lwd=2)
+    lines(ygrid,fhat3,col='green',lwd=2,lty=2)
+    lines(ygrid,fhat3.u,lty=3,col='red')
+    lines(ygrid,fhat3.l,lty=3,col='red')
+    
+    
+    
+    
+    plot(ygrid*sdy,ftemp,col='purple',lwd=4,type = 'l',ylim=c(0,0.05),bty='n',main='',ylab='Density', xlab = 'y')
+    lines(ygrid,fhat_adj,col='green')
+    lines(ygrid,fhat_adj.u,lty=3,col='red',lwd=2)
+    lines(ygrid,fhat_adj.l,lty=3,col='red',lwd=2)
+    
+    
+    
+    #legend(-1, .25, legend=c('True Density', 'Estimated Density', 'Prior on Mean', '95% Credible Interval'),
+    #       col=c('purple', 'green', 'blue', 'red'), lty=c(1,2,1,3), cex=0.8)
+    
+    
+    
+    plot(ygrid,ftemp2,col='purple',lwd=4,type = 'l',ylim=c(0,0.05),bty='n',main='',ylab='Density', xlab = 'y')
+    lines(ygrid,fhat2,col='green')
+    lines(ygrid,fhat2.u,lty=3,col='red',lwd=2)
+    lines(ygrid,fhat2.l,lty=3,col='red',lwd=2)
+    
+    plot(ygrid,ftemp3,col='purple',lwd=4,type = 'l',ylim=c(0,0.05),bty='n',main='',ylab='Density', xlab = 'y')
+    lines(ygrid,fhat3,col='green')
+    lines(ygrid,fhat3.u,lty=3,col='red',lwd=2)
+    lines(ygrid,fhat3.l,lty=3,col='red',lwd=2)
+    
+    
+    legend(-1.6, .25, legend=c('True Density', 'Estimated Density', '95% Credible Interval'),
+           col=c('purple', 'green', 'red'), lty=1:3, cex=0.8)
+    
+    
+  }
+  
+}
+
+results_df <- data.frame(
+  Mean_Time = c(mean(t_w), mean(t_u), mean(t_n), mean(t_bayesm)),
+  Mean_RMSE = c(mean(err_w), mean(err_u), mean(err_n), mean(err_bayesm)),
+  Mean_Coverage = c(mean(cover_w), mean(cover_u), mean(cover_n), mean(cover_bayesm)),
+  Mean_Complete_Coverage = c(mean(cc_w), mean(cc_u), mean(cc_n), mean(cc_bayesm)),
+  Mean_Interval_Length = c(mean(cil_w), mean(cil_u), mean(cil_n), mean(cil_bayesm))
+)
+row.names(results_df)<- c("Targeted Sub-sampling", "RJKDE Uniform Sub-sampling", "Full Data", "Bayesm with Uniform Sub-sampling")
+
+# Print the data frame
+print(round(results_df,2))

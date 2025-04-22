@@ -80,7 +80,6 @@ KDE_density_rcpp <- function(mu, sigma, w, x) {
 #'        (default: c(0.45, 0.1, 0.45)).
 #' @param sig_a: Shape parameter for Beta prior on bandwidths (default: 5).
 #' @param sig_b: Scale parameter for Beta prior on bandwidths (default: 5).
-#' @param mu_prior_b: Prior parameter for means (default: 3).
 #' @param mu_step_size: Step size for mean proposals (default: 0.1).
 #' @param k: Initial number of mixture components (default: 20).
 #' @param bw: Bandwidth parameter (default: 0.2).
@@ -123,7 +122,7 @@ KDE_density_rcpp <- function(mu, sigma, w, x) {
 #'
 #' @seealso \code{\link{KDE_density_rcpp}} for the density calculation function
 #' @export
-rj_mcmc_rcpp <- function(y, ygrid, drop_add_prob = as.numeric( c(0.45,0.1,0.45)), sig_a = 5, sig_b = 5, mu_prior_b = 3, mu_step_size = 0.1, k = 20L, bw = 0.2, mc = 5000L, mu_h = 0.0, sig_h = 1.0) {
-    .Call(`_RJKDE_rj_mcmc_rcpp`, y, ygrid, drop_add_prob, sig_a, sig_b, mu_prior_b, mu_step_size, k, bw, mc, mu_h, sig_h)
+rj_mcmc_rcpp <- function(y, ygrid, drop_add_prob = as.numeric( c(0.45,0.1,0.45)), sig_a = 5, sig_b = 5, mu_step_size = 0.1, k = 20L, bw = 0.2, mc = 5000L, mu_h = 0.0, sig_h = 1.0) {
+    .Call(`_RJKDE_rj_mcmc_rcpp`, y, ygrid, drop_add_prob, sig_a, sig_b, mu_step_size, k, bw, mc, mu_h, sig_h)
 }
 

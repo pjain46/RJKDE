@@ -1,0 +1,251 @@
+#include <Rcpp.h>
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+NumericVector rnormmix_rcpp(NumericVector mu, double sigma) {
+  int k = mu.length();
+  IntegerVector inds = sample(k, 1, true);
+
+  NumericVector xsamp(1);
+    double x = R::rnorm(mu[inds[0]-1], sigma);
+    xsamp[0] = x;
+
+  return(xsamp);
+}
+
+// NumericVector Cquantile(NumericVector x, NumericVector q) {
+//   NumericVector y = clone(x);
+//   std::sort(y.begin(), y.end());
+//   return y[x.size()*(q - 0.000000001)];
+// }
+
+// [[Rcpp::export]]
+double KDE_density_rcpp(NumericVector mu, NumericVector h, NumericVector w, double x){
+  int k = mu.length();
+  NumericVector A(k);
+  for(int i = 0; i < k; i++){
+    A[i] = ((R::dnorm(x, mu[i], h[i], false))*w[i])/k;
+  }
+  double a = log(sum(A));
+  return(a);
+}
+
+
+//[[Rcpp::export]]
+List rj_mcmc_rcpp(NumericVector y, NumericVector ygrid, NumericVector drop_add_prob = NumericVector::create(0.45,0.1,0.45), double sig_a = 5, double sig_b = 5, double mu_step_size = 0.1, int k = 20, double bw = 0.2, int mc = 5000, double mu_h = 0.0, double sig_h = 1.0){
+
+  double nsamp = y.length();
+  double gridsize = ygrid.length();
+
+  NumericMatrix fsamps(gridsize, mc);
+
+
+  NumericMatrix fsamps_adj(gridsize, mc);
+
+
+  NumericVector ksamps(mc);
+
+  int mu_length = 2*nsamp + 500;
+  NumericVector mu(mu_length);
+
+
+   y.sort();
+
+   NumericVector w(mu_length,1.0);
+
+  int step = floor(nsamp/k);
+  // this will throw an error if k > 2*nsamp; fix later
+  for(int i = 0; i < k; i++){
+    if (i < nsamp){
+      mu[i] = y[step*i];
+  }
+
+  }
+
+  double sig_ub = sig_h;
+
+  NumericVector sig = rep(0.9*bw, mu_length);
+  NumericVector sig_adj(mu_length);
+  NumericVector mu_adj(mu_length);
+  NumericVector p(mu_length);
+
+  NumericVector siginit = rep(1.5*bw, nsamp);
+
+  NumericVector loglike_curr_init(nsamp);
+  for(int i = 0; i < nsamp; i++){
+    loglike_curr_init[i] = KDE_density_rcpp(head(mu, k), head(sig, k), head(w,k), y[i]);
+  }
+
+
+  double prior_curr;
+  double prior_prop;
+
+
+
+  double adj;
+  double sig_new;
+  NumericVector like_prop(nsamp);
+  NumericVector mu_new;
+
+
+
+  for(int iter = 0; iter < mc; iter++){
+
+    NumericVector drop_add = sample(NumericVector::create(-1, 0, 1), 1, false, drop_add_prob);
+    double k_prop = abs(k + drop_add[0]);
+    IntegerVector ind_prop = sample(k, 1, false);
+
+    adj = 0;
+
+    if (k_prop > k){
+
+      mu_new = rnormmix_rcpp(y, siginit[0]);
+    //  sig_new = R::rgamma(sig_shape,1/sig_rate);
+
+   //  Rcout << sig_new << " ";
+
+      sig_new = R::rbeta(sig_a,sig_b)*sig_ub;
+
+    //  Rcout << sig_new << " ";
+
+      // sig_new = std::min(sig_new,0.8*sig_h);
+
+      adj  = -KDE_density_rcpp(y, siginit, head(w,nsamp),mu_new[0]) - R::dbeta(sig_new/sig_ub, sig_a, sig_b, true);
+
+      for(int i = 0; i < nsamp; i++){
+        like_prop[i] = R::dnorm(y[i], mu_new[0], sig_new, false);
+      }
+
+    }
+
+    if (k_prop < k){
+
+      adj  = KDE_density_rcpp(y, siginit, head(w,nsamp), mu[ind_prop[0]-1]) + R::dbeta(sig_new/sig_ub, sig_a, sig_b, true);
+
+      for(int i = 0; i < nsamp; i++){
+        like_prop[i] = - R::dnorm(y[i], mu[ind_prop[0]-1], sig[ind_prop[0]-1], false);
+      }
+
+    }
+
+    if (k_prop == k){
+
+
+
+      mu_new[0] = mu[ind_prop[0]-1] + mu_step_size*sig[ind_prop[0]-1]*(R::rnorm(0, 1));
+
+
+   sig_new = sig[ind_prop[0]-1] + 0.01*(R::rnorm(0, 1));
+
+      if (sig_new > 0.0){
+
+        sig_new = fmod(sig_new,sig_ub);
+
+      }
+
+      if (sig_new < 0.0){
+
+        sig_new = sig_ub + fmod(sig_new,sig_ub);
+
+
+      }
+
+
+    //  sig_new = exp(log(sig[ind_prop[0]-1]) + 0.01*(R::rnorm(0, 1)));
+
+    // sig_new = std::min(sig_new,0.99*sig_h);
+
+
+
+
+
+
+      adj = 0;
+
+      for(int i = 0; i < nsamp; i++){
+        like_prop[i] = R::dnorm(y[i], mu_new[0], sig_new, false) - R::dnorm(y[i], mu[ind_prop[0]-1], sig[ind_prop[0]-1], false);
+      }
+
+    }
+
+    double loglike_curr = sum(loglike_curr_init);
+    NumericVector loglike_prop_a = log((k*(exp(loglike_curr_init))+ like_prop)/k_prop);
+    double loglike_prop = sum(loglike_prop_a);
+
+    prior_curr = R::dgamma(k, 3.0*2.0*log(nsamp), 1.0/2.0, true);
+    prior_prop = R::dgamma(k_prop, 3.0*2.0*log(nsamp), 1.0/2.0, true);
+
+    double ratio = exp(loglike_prop - loglike_curr + prior_prop - prior_curr + adj);
+
+
+    if(R::runif(0,1) < ratio){
+
+
+      if (k_prop > k){
+
+        mu[k] = mu_new[0];
+        sig[k] = sig_new;
+      }
+
+      if (k == k_prop){
+        mu[ind_prop[0]-1] = mu_new[0];
+        sig[ind_prop[0]-1] = sig_new;
+      }
+
+      if (k_prop < k){
+
+        mu[ind_prop[0]-1] = mu[k-1];
+        sig[ind_prop[0]-1] = sig[k-1];
+
+      }
+
+
+      loglike_curr_init = loglike_prop_a;
+      k = k_prop;
+
+    }
+
+
+    ksamps[iter] = k;
+
+    if (mu_h != -100){
+    for(int i = 0; i < k; i++){
+
+    sig_adj[i] = 1.0/pow((1.0/pow(sig[i],2) - 1.0/pow(sig_h,2)),0.5);
+    mu_adj[i] = (mu[i]/pow(sig[i],2) - mu_h/pow(sig_h,2))*pow(sig_adj[i],2);
+    double a = R::dnorm(mu_h, mu_adj[i], pow(pow(sig_adj[i],2) + pow(sig_h,2),0.5),false);
+    p[i] = 1.0/a;
+
+    }
+
+
+   double normalizer = sum(head(p,k));
+    for (int i = 0; i < k; i++){
+      p[i] = k*p[i]/normalizer;
+
+    }
+
+    for(int i = 0; i < ygrid.length(); i++){
+      fsamps(i,iter) = exp(KDE_density_rcpp(head(mu, k), head(sig, k), head(w,k), ygrid[i]));
+
+      fsamps_adj(i,iter) = exp(KDE_density_rcpp(head(mu_adj, k), head(sig_adj, k), head(p,k), ygrid[i]));
+
+    }
+
+    }else{
+
+
+    for(int i = 0; i < ygrid.length(); i++){
+      fsamps(i,iter) = exp(KDE_density_rcpp(head(mu, k), head(sig, k), head(w,k), ygrid[i]));
+      fsamps_adj(i,iter) = 1.0;
+      //fsamps_adj(i,iter) = exp(KDE_density_rcpp(head(mu_adj, k), head(sig_adj, k), head(p,k), ygrid[i]));
+
+    }
+
+    }
+
+
+  }
+
+  return(List::create(Named("fsamps") = fsamps , Named("fsamps_adj") = fsamps_adj, Named("ksamps") = ksamps, Named("ygrid") = ygrid));
+}
