@@ -23,8 +23,8 @@ update_cluster_parameters <- function(z, k, data, lambda, mu0, lambda0, a0, b0) 
 
     # Posterior parameters
     # Posterior precision = Prior precision + Data precision
-    prec_j <- lambda0 + nj * lambda
-    mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
+    prec_j <- lambda0 + nj
+    mu_j <- (lambda0 * mu0 + nj * x_bar) / prec_j
 
     a_j <- a0 + nj / 2
     # b_new = b_0 + 0.5 * SSE within cluster + 0.5 * Penalty from deviating from mu_0
@@ -44,7 +44,7 @@ update_cluster_parameters <- function(z, k, data, lambda, mu0, lambda0, a0, b0) 
 # Dirichlet Process Mixture Model (DPMM) clustering using Gibbs sampling
 
 
-dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
+dpmm_clustering <- function(data, ygrid = seq(min(data) - 1, max(data) + 1, length.out = 100),
                             n_iter = 500,
                             alpha = 1, lambda = 1,
                             mu0 = mean(data), lambda0 = 1/(2*sd(data))^2,
@@ -102,8 +102,8 @@ dpmm_clustering <- function(data, ygrid = seq(-3, 3, length.out = 100),
       cluster_probs <- sapply(1:k, function(j) {
         nj <- sum(z == j, na.rm = TRUE)
         x_bar <- mean(data[z == j], na.rm = TRUE)
-        prec_j <- lambda0 + nj * lambda
-        mu_j <- (lambda0 * mu0 + lambda * nj * x_bar) / prec_j
+        prec_j <- lambda0 + nj
+        mu_j <- (lambda0 * mu0 + nj * x_bar) / prec_j
 
         # Compute probability for cluster j: Likelihood × Cluster size
         # Posterior Predictive Distribution from conjugate model
